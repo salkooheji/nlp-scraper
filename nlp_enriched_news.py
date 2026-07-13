@@ -12,6 +12,7 @@ import glob
 import os
 import pickle
 
+import numpy as np
 import pandas as pd
 import spacy
 from nltk.sentiment import SentimentIntensityAnalyzer
@@ -23,6 +24,17 @@ OUTPUT_PATH = os.path.join("results", "enhanced_news.csv")
 POSITIVE_THRESHOLD = 0.05
 NEGATIVE_THRESHOLD = -0.05
 
+TOP_N = 10
+
+# Environmental-disaster keywords. Multi-word, unambiguous phrases only, to
+# avoid false positives from words like "spill" or "plant" used in other
+# contexts (see subject warning).
+SCANDAL_KEYWORDS = (
+    "oil spill, toxic waste dumping, chemical leak, deforestation, "
+    "water contamination, air pollution, radioactive leak, "
+    "greenhouse gas emissions, environmental disaster, ecological damage, "
+    "illegal dumping, groundwater pollution"
+)
 
 def load_articles():
     """Load every scraped daily CSV into a single DataFrame."""
@@ -49,6 +61,21 @@ def sentiment_label(compound):
         return "negative"
     return "neutral"
 
+def scandal_similarity(doc, orgs, keywords_doc):
+    """Return the max cosine similarity between the disaster keywords and
+    the sentences of the article that mention a detected ORG entity.
+
+    Returns 0.0 if no sentence mentions an entity or vectors are empty.
+    """
+    best = 0.0
+    for sentence in doc.sents:
+        if not any(org in sentence.text for org in orgs):
+            continue
+        if sentence.vector_norm == 0:
+            continue
+        similarity = keywords_doc.similarity(sentence)
+        best = max(best, float(similarity))
+    return best
 
 def main():
     articles = load_articles()
@@ -56,6 +83,7 @@ def main():
     analyzer = SentimentIntensityAnalyzer()
     with open(MODEL_PATH, "rb") as f:
         classifier = pickle.load(f)
+        keywords_doc = nlp(SCANDAL_KEYWORDS)
 
     rows = []
     for _, article in articles.iterrows():
@@ -78,6 +106,9 @@ def main():
         compound = analyzer.polarity_scores(article["body"])["compound"]
         label = sentiment_label(compound)
         print(f"The article {article['headline']} has a {label} sentiment\n")
+        print("---------- Scandal detection ----------\n")
+        print("Computing embeddings and distance ...\n")
+        distance = scandal_similarity(doc, orgs, keywords_doc)
 
         rows.append({
             "Unique ID": article["unique_id"],
@@ -88,12 +119,20 @@ def main():
             "Org": orgs,
             "Topics": [topic],
             "Sentiment": compound,
+            "Scandal_distance": distance,
         })
 
     result = pd.DataFrame(rows)
+    threshold = result["Scandal_distance"].nlargest(TOP_N).min()
+    result["Top_10"] = result["Scandal_distance"] >= threshold
+
+    for _, row in result[result["Top_10"]].iterrows():
+        entities = ", ".join(row["Org"]) if row["Org"] else "unknown entity"
+        print(f"Environmental scandal detected for {entities}")
+
     os.makedirs("results", exist_ok=True)
     result.to_csv(OUTPUT_PATH, index=False)
-    print(f"Saved {len(result)} enriched articles in {OUTPUT_PATH}")
+    print(f"\nSaved {len(result)} enriched articles in {OUTPUT_PATH}")
 
 
 if __name__ == "__main__":

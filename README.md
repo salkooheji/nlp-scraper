@@ -1,4 +1,4 @@
-# NLP Scraper — News Intelligence Platform
+# NLP Scraper - News Intelligence Platform
 
 An end-to-end NLP pipeline that scrapes live news articles and enriches them
 with entity recognition, topic classification, sentiment analysis and
@@ -10,13 +10,13 @@ Built as part of the 01Edu AI Specialization curriculum.
 
 The platform runs in two independent stages:
 
-**Stage 1 — Scraper** (`scraper_news.py`)
+**Stage 1 - Scraper** (`scraper_news.py`)
 Discovers fresh BBC News articles through the site's XML news sitemap,
 downloads and parses each page, and stores 300+ articles (unique ID, URL,
 date, headline, body) in one CSV file per day. Idempotent: re-running it
 tops up the dataset without ever duplicating an article.
 
-**Stage 2 — NLP engine** (`nlp_enriched_news.py`)
+**Stage 2 - NLP engine** (`nlp_enriched_news.py`)
 Processes every stored article through four analyses:
 
 | Analysis | Method | Output |
@@ -48,7 +48,7 @@ bbc_news_train.csv ──> results/training_model.py ──> topic_classifier.pk
 - Topic classifier accuracy on the held-out test set: **98.5%**
   (required: > 95%), with per-class F1 between 0.97 and 0.99.
 - Learning curves (`results/learning_curves.png`) show training and
-  cross-validation accuracy converging as data grows — the model
+  cross-validation accuracy converging as data grows - the model
   generalizes rather than memorizes.
 - Scandal detection surfaces genuinely environmental stories (water
   contamination, oil terminals, reservoir incidents) from a general
@@ -107,7 +107,7 @@ representations without training anything.
 **Similarity measure:** cosine similarity between the embedded disaster
 keywords and every article sentence containing a detected ORG entity.
 Cosine compares the *direction* of vectors, not their magnitude, so short
-and long sentences are compared fairly — meaning is captured by direction.
+and long sentences are compared fairly - meaning is captured by direction.
 Values range from 0 (unrelated) to 1 (same meaning).
 
 **Per-article metric:** the maximum sentence similarity. A scandal is
@@ -122,22 +122,22 @@ positives.
 
 ### Other choices
 
-- **BBC as the news source** — its XML news sitemaps make discovery clean
+- **BBC as the news source** - its XML news sitemaps make discovery clean
   and reliable, and the topic classifier is trained on BBC text, so scraped
   articles match the training distribution.
-- **One CSV per day** instead of a SQL database — simpler, transparent,
+- **One CSV per day** instead of a SQL database - simpler, transparent,
   directly inspectable, and sufficient for batch processing.
-- **Pre-trained sentiment model (VADER)** — labeled news sentiment data is
+- **Pre-trained sentiment model (VADER)** - labeled news sentiment data is
   expensive; reusing a validated lexicon-based model is the pragmatic
   industry approach.
-- **Fixed random seeds** — training is fully reproducible run to run.
+- **Fixed random seeds** - training is fully reproducible run to run.
 
 ## Known limitations
 
 - spaCy NER occasionally tags non-companies (e.g. sports teams, government
   bodies) as `ORG`; these are still organizations, but not all are
   companies.
-- The scandal score is unsupervised — it ranks likelihood, it does not
+- The scandal score is unsupervised - it ranks likelihood, it does not
   verify that a scandal occurred.
 - BBC's news sitemap covers roughly the last 48 hours, so building a
   multi-day dataset requires running the scraper on several days.

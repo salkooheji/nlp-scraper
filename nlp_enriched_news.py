@@ -83,7 +83,7 @@ def main():
     analyzer = SentimentIntensityAnalyzer()
     with open(MODEL_PATH, "rb") as f:
         classifier = pickle.load(f)
-        keywords_doc = nlp(SCANDAL_KEYWORDS)
+    keywords_doc = nlp(SCANDAL_KEYWORDS)
 
     rows = []
     for _, article in articles.iterrows():
